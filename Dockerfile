@@ -1,17 +1,30 @@
-FROM alpine
+FROM alpine:latest
 MAINTAINER David Personette <dperson@gmail.com>
 
 # Install tor and privoxy
 RUN apk --no-cache --no-progress upgrade && \
-    apk --no-cache --no-progress add bash curl privoxy shadow tini tor tzdata&&\
-    file='/etc/privoxy/config' && \
+    apk --no-cache --no-progress add bash curl shadow tini tor tzdata privoxy
+
+# Fix privoxy config
+RUN mv /etc/privoxy/config.new /etc/privoxy/config && \
+    mv /etc/privoxy/default.action.new /etc/privoxy/default.action && \
+    mv /etc/privoxy/default.filter.new /etc/privoxy/default.filter && \
+    mv /etc/privoxy/match-all.action.new /etc/privoxy/match-all.action && \
+    mv /etc/privoxy/regression-tests.action.new /etc/privoxy/regression-tests.action && \
+    mv /etc/privoxy/trust.new /etc/privoxy/trust && \
+    mv /etc/privoxy/user.action.new /etc/privoxy/user.action && \
+    mv /etc/privoxy/user.filter.new /etc/privoxy/user.filter
+
+# Modify privoxy config
+RUN file='/etc/privoxy/config' && \
+    ls -l '/etc/privoxy/' && \
     sed -i 's|^\(accept-intercepted-requests\) .*|\1 1|' $file && \
     sed -i '/^listen/s|127\.0\.0\.1||' $file && \
     sed -i '/^listen.*::1/s|^|#|' $file && \
     sed -i 's|^\(logfile\)|#\1|' $file && \
     sed -i 's|^#\(log-messages\)|\1|' $file && \
     sed -i 's|^#\(log-highlight-messages\)|\1|' $file && \
-    sed -i '/forward *localhost\//a forward-socks5t / 127.0.0.1:9050 .' $file&&\
+    sed -i '/forward *localhost\//a forward-socks5t / 127.0.0.1:9050 .' $file && \
     sed -i '/^forward-socks5t \//a forward 172.16.*.*/ .' $file && \
     sed -i '/^forward 172\.16\.\*\.\*\//a forward 172.17.*.*/ .' $file && \
     sed -i '/^forward 172\.17\.\*\.\*\//a forward 172.18.*.*/ .' $file && \
